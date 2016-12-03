@@ -47,7 +47,6 @@ int main(int argc, char* argv[]) {
 
 //TODO what if read didn't work?
 	while ((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
-		printf("%s ",buffer);
 		totalNumOfBytesRead += numOfBytesRead;
 	}
 
