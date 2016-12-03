@@ -31,8 +31,8 @@ int main(int argc, char* argv[]) {
 		int returnVal = 0;
 		int returnVal2 = 0;
 
-		printf("num of bytes to send: %d\n",numOfBytesToSend);
-		printf("creating message to be sent...\n");
+		//printf("num of bytes to send: %d\n",numOfBytesToSend);
+		//printf("creating message to be sent...\n");
 		/*create the message to be sent*/
 
 		for(int i = 0; i < numOfBytesToSend; i++) {
@@ -40,8 +40,8 @@ int main(int argc, char* argv[]) {
 		}
 
 		buffer[numOfBytesToSend] = '\0';
-		printf("message: \n");
-		printf("%s\n",buffer);
+		//printf("message: \n");
+		//printf("%s\n",buffer);
 
 
 		/*create a named pipe*/
