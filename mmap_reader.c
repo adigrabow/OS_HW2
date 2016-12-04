@@ -21,6 +21,8 @@
 
 #define MAPPED_FILE_NAME "/tmp/mmapped.bin"
 #define PERMISSION_CODE 0600
+#define BUFFER_SIZE 4096
+
 
 void sigusr_handler(int sig); /* a SIGUSR1 handler function */
 
@@ -40,6 +42,8 @@ void sigusr_handler(int sig) {
 	char* data; /* a pointer to the place in the mapped file we want to read from */
 	int charCounter = 0; /* counts the  number of 'a' characters read from the file */
 	int munmapRes = 0;
+	int numberOFIterations = 0;
+
 
 	/* Open the file */
 	fileDescriptor = open(MAPPED_FILE_NAME, O_RDWR , PERMISSION_CODE); //TODO maek sure read write is okay.
@@ -58,7 +62,8 @@ void sigusr_handler(int sig) {
 	}
 
 	fileSize = fileStat.st_size; /* in bytes */
-	printf("file size is = %d\n",fileSize);
+	numberOFIterations = (fileSize / BUFFER_SIZE) + 1;
+	printf("file size is = %d\nnumberOFIterations = %d",fileSize,numberOFIterations);
 
 	/*get time before reading the mapped file*/
 	returnVal = gettimeofday(&t1, NULL);
@@ -69,20 +74,34 @@ void sigusr_handler(int sig) {
 		exit(errno);
 	}
 
-	/* Create a memory map for the file */
-	data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,0);
-	if (MAP_FAILED == data) {
-		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
-		close(fileDescriptor);
-		signal(SIGTERM, SIG_DFL);
-		exit(errno);
-	}
 
-	/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
-	for (int i = 0; i < fileSize; i++ ) {
-		if ( (char) data[i] == 'a') {
-			charCounter++;
+	for (int i = 0; i < numberOFIterations; i++) {
+
+		/* Create a memory map for the file */
+		data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,i * BUFFER_SIZE); /* loop over ofset 4096 */
+		if (MAP_FAILED == data) {
+			printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+			close(fileDescriptor);
+			signal(SIGTERM, SIG_DFL);
+			exit(errno);
 		}
+
+		/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
+		for (int i = 0; i < BUFFER_SIZE; i++ ) {
+			if ( (char) data[i] == 'a') {
+				charCounter++;
+			}
+		}
+
+		/* munmap */
+		munmapRes = munmap(data, BUFFER_SIZE);
+		if (munmapRes < 0) {
+			printf("Error while using munmap syscall. %s\n", strerror(errno));
+			close(fileDescriptor);
+			signal(SIGTERM, SIG_DFL);
+			exit(errno);
+		}
+
 	}
 
 	printf("read %d 'a' chars\n",charCounter);
@@ -102,14 +121,6 @@ void sigusr_handler(int sig) {
 
 	printf("%d were read in %f microseconds through MMAP\n", charCounter ,elapsed_microsec);
 
-	//TODO do i need to munmap???
-	munmapRes = munmap(data, fileSize);
-	if (munmapRes < 0) {
-		printf("Error while using munmap syscall. %s\n", strerror(errno));
-		close(fileDescriptor);
-		signal(SIGTERM, SIG_DFL);
-		exit(errno);
-	}
 
 	/* Remove the file from the disk (man 2 unlink) */
 	if (unlink(MAPPED_FILE_NAME) == -1) {
