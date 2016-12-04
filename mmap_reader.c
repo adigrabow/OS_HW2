@@ -43,6 +43,7 @@ void sigusr_handler(int sig) {
 	int charCounter = 0; /* counts the  number of 'a' characters read from the file */
 	int munmapRes = 0;
 	int numberOFIterations = 0;
+	int index = 0;
 
 
 	/* Open the file */
@@ -74,6 +75,7 @@ void sigusr_handler(int sig) {
 		exit(errno);
 	}
 
+	int cnt = 0;
 
 	for (int i = 0; i < numberOFIterations; i++) {
 
@@ -87,8 +89,10 @@ void sigusr_handler(int sig) {
 		}
 
 		/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
-		for (int i = 0; i < BUFFER_SIZE; i++ ) {
-			if ( (char) data[i] == 'a') {
+		index = 0;
+
+		while (charCount < fileSize) {
+			if ((char) data[index] == 'a') {
 				charCounter++;
 			}
 		}
@@ -101,7 +105,6 @@ void sigusr_handler(int sig) {
 			signal(SIGTERM, SIG_DFL);
 			exit(errno);
 		}
-
 	}
 
 	printf("read %d 'a' chars\n",charCounter);

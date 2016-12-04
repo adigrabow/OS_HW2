@@ -47,10 +47,11 @@ int main (int argc, char* argv[]) {
 	int fileDesc = 0;
 	char* data; /* a pointer to the place in the mapped file we want to write to */
 	int lseekRes = 0;
-	int syncRes = 0;
 	int munmapRes = 0;
 	int writeRes = 0;
 	int numberOFIterations = (numOfBytesToWrite / BUFFER_SIZE) + 1;
+	int charCount = 0; /*the number of characters already written*/
+	int index = 0;
 
 	printf("numberOFIterations = %d\n", numberOFIterations);
 
@@ -63,7 +64,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* Force the file to be of the same size as the (mmapped) array */
-	lseekRes = lseek(fileDesc, numOfBytesToWrite, SEEK_SET); //TODO make sure the minus 1 is okay
+	lseekRes = lseek(fileDesc, numOfBytesToWrite - 1, SEEK_SET); //TODO make sure the minus 1 is okay
 	if (lseekRes < 0) {
 		printf("Error using lseek() to 'stretch' the file: %s\n", strerror(errno));
 		close(fileDesc);
@@ -84,7 +85,6 @@ int main (int argc, char* argv[]) {
 	returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
 		printf("Could not get time of day. Exiting...\n");
-		munmap(data, numOfBytesToWrite);
 		close(fileDesc);
 		signal(SIGTERM, SIG_DFL);
 		return errno;
@@ -101,9 +101,12 @@ int main (int argc, char* argv[]) {
 			signal(SIGTERM, SIG_DFL);
 			return errno;
 		}
+		index = 0;
 		/* write to the file (it's in the memory!) */
-		for (int j = 0; j < BUFFER_SIZE; j ++) { //TODO make sure minus 1 is okay
-			data[j] = 'a';
+		while (charCount < numOfBytesToWrite - 1) {
+			data[index] = 'a';
+			index++;
+			charCount++;
 		}
 
 		/* release the memory - unmap the file */
