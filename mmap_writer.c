@@ -59,7 +59,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* Force the file to be of the same size as the (mmapped) array */
-	lseekRes = lseek(fileDesc, numOfBytesToWrite - 1, SEEK_SET); //TODO make sure the minus 1 is okay
+	lseekRes = lseek(fileDesc, numOfBytesToWrite, SEEK_SET); //TODO make sure the minus 1 is okay
 	if (lseekRes < 0) {
 		printf("Error using lseek() to 'stretch' the file: %s\n", strerror(errno));
 		close(fileDesc);
@@ -68,7 +68,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* write at the end of the file*/
-	writeRes = write(fileDesc, '\0', 1);
+	writeRes = write(fileDesc, "\0", 1);
 	if (writeRes < 0 ){
 		printf("Error writing last byte of the file: %s\n", strerror(errno));
 		close(fileDesc);
@@ -77,7 +77,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* map the file: both read & write (same as 'open'), and make sure we can share it */
-	data = (char*) mmap(NULL, numOfBytesToWrite - 1, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
+	data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
 	if (MAP_FAILED == data) {
 		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
 		close(fileDesc);
