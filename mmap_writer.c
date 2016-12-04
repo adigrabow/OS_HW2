@@ -104,7 +104,7 @@ int main (int argc, char* argv[]) {
 		index = 0;
 		/* write to the file (it's in the memory!) */
 		while (charCount < numOfBytesToWrite - 1) {
-			data[index] = 'a';
+			data[index] = 'b';
 			index++;
 			charCount++;
 		}
