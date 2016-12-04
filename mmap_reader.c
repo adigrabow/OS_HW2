@@ -64,7 +64,9 @@ void sigusr_handler(int sig) {
 
 	fileSize = fileStat.st_size; /* in bytes */
 	numberOFIterations = (fileSize / BUFFER_SIZE) + 1;
-	printf("file size is = %d\nnumberOFIterations = %d",fileSize,numberOFIterations);
+
+	printf("numberOFIterations = %d\n", numberOFIterations);
+	printf("file size is = %d\n",fileSize);
 
 	/*get time before reading the mapped file*/
 	returnVal = gettimeofday(&t1, NULL);
@@ -75,7 +77,6 @@ void sigusr_handler(int sig) {
 		exit(errno);
 	}
 
-	int cnt = 0;
 
 	for (int i = 0; i < numberOFIterations; i++) {
 
