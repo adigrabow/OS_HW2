@@ -77,7 +77,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* map the file: both read & write (same as 'open'), and make sure we can share it */
-	data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
+	data = (char*) mmap(NULL, numOfBytesToWrite - 1, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
 	if (MAP_FAILED == data) {
 		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
 		close(fileDesc);
