@@ -91,7 +91,7 @@ void sigusr_handler(int sig) {
 		/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
 		index = 0;
 
-		while (charCounter < fileSize) {
+		while (charCounter < fileSize - 1) {
 			if ((char) data[index] == 'a') {
 				charCounter++;
 			}
