@@ -21,6 +21,7 @@
 
 
 #define MAPPED_FILE_NAME "/tmp/mmapped.bin"
+#define BUFFER_SIZE 4096
 
 
 int main (int argc, char* argv[]) {
@@ -49,6 +50,9 @@ int main (int argc, char* argv[]) {
 	int syncRes = 0;
 	int munmapRes = 0;
 	int writeRes = 0;
+	int numberOFIterations = (numOfBytesToWrite / BUFFER_SIZE) + 1;
+
+	printf("numberOFIterations = %d\n", numberOFIterations);
 
 	/* open/create the file to be mapped to memory */
 	fileDesc = open(MAPPED_FILE_NAME, O_RDWR | O_CREAT, 0600);
@@ -76,15 +80,6 @@ int main (int argc, char* argv[]) {
 		return errno;
 	}
 
-	/* map the file: both read & write (same as 'open'), and make sure we can share it */
-	data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
-	if (MAP_FAILED == data) {
-		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
-		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
-		return errno;
-	}
-
 	/*get time before writing to mapped file*/
 	returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
@@ -95,20 +90,33 @@ int main (int argc, char* argv[]) {
 		return errno;
 	}
 
-	/* write to the file (it's in the memory!) */
-	for (int i = 0; i < numOfBytesToWrite - 1; i ++) { //TODO make sure minus 1 is okay
-		data[i] = 'a';
+	/* each iteration we will write 4096 bytes to the file*/
+	for (int i = 0; i < numberOFIterations; i++) {
+
+		/* map the file: both read & write (same as 'open'), and make sure we can share it */
+		data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,i * BUFFER_SIZE);
+		if (MAP_FAILED == data) {
+			printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+			close(fileDesc);
+			signal(SIGTERM, SIG_DFL);
+			return errno;
+		}
+		/* write to the file (it's in the memory!) */
+		for (int j = 0; j < BUFFER_SIZE; j ++) { //TODO make sure minus 1 is okay
+			data[j] = 'a';
+		}
+
+		/* release the memory - unmap the file */
+		munmapRes = munmap(data, BUFFER_SIZE);
+		if (munmapRes < 0) {
+			printf("Error while using munmap syscall. %s\n", strerror(errno));
+			close(fileDesc);
+			signal(SIGTERM, SIG_DFL);
+			return errno;
+		}
+
 	}
 
-	/* synchronize memory with physical storage */
-	syncRes = msync(data, numOfBytesToWrite, MS_SYNC);
-	if (syncRes < 0) {
-		printf("Error while using msync syscall. %s\n", strerror(errno));
-		munmap(data, numOfBytesToWrite);
-		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
-		return errno;
-	}
 
 	/*Send a signal (SIGUSR1) to the reader process (man 2 kill)*/
 	printf("right before sending the SIGUSR1 signal\n");
@@ -120,13 +128,6 @@ int main (int argc, char* argv[]) {
 		return errno;
 	}
 
-	munmapRes = munmap(data, numOfBytesToWrite);
-	if (munmapRes < 0) {
-		printf("Error while using munmap syscall. %s\n", strerror(errno));
-		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
-		return errno;
-	}
 
 	/*get time after writing to mapped file*/
 	returnVal2 = gettimeofday(&t2, NULL);
