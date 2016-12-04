@@ -25,7 +25,17 @@
 
 int main (int argc, char* argv[]) {
 
-	printf("entered mmap_writer\n");
+	if (argc < 3) {
+		printf("Expected 2 arguments: number_of_bytes_to_write and reader_process_ID.\n");
+		return -1;
+	}
+
+	/* Ignore SIGTERM */
+	if (signal(SIGTERM, SIG_IGN) == SIG_ERR) {
+		printf("Could not ignore SIGTERM signal as requested. Exiting...\n");
+		return -1;
+	}
+
 	struct timeval t1, t2;
 	double elapsed_microsec;
 	int returnVal = 0;
@@ -44,24 +54,25 @@ int main (int argc, char* argv[]) {
 	fileDesc = open(MAPPED_FILE_NAME, O_RDWR | O_CREAT, 0600);
 	if (fileDesc < 0) {
 		printf("Error opening/creating file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
-	printf("opened file\n");
 
-
-	// Force the file to be of the same size as the (mmapped) array
-	lseekRes = lseek(fileDesc, numOfBytesToWrite, SEEK_SET);
+	/* Force the file to be of the same size as the (mmapped) array */
+	lseekRes = lseek(fileDesc, numOfBytesToWrite - 1, SEEK_SET); //TODO make sure the minus 1 is okay
 	if (lseekRes < 0) {
 		printf("Error using lseek() to 'stretch' the file: %s\n", strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
-	printf("did lseek\n");
-
 	/* write at the end of the file*/
-	writeRes = write(fileDesc, "\0", 1);
+	writeRes = write(fileDesc, '\0', 1);
 	if (writeRes < 0 ){
 		printf("Error writing last byte of the file: %s\n", strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -69,25 +80,33 @@ int main (int argc, char* argv[]) {
 	data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
 	if (MAP_FAILED == data) {
 		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
-	printf("mapped to memory\n");
+
 	/*get time before writing to mapped file*/
 	returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
 		printf("Could not get time of day. Exiting...\n");
+		munmap(data, numOfBytesToWrite);
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
 	/* write to the file (it's in the memory!) */
-	for (int i = 0; i < numOfBytesToWrite ; i ++) {
+	for (int i = 0; i < numOfBytesToWrite - 1; i ++) { //TODO make sure minus 1 is okay
 		data[i] = 'a';
 	}
-	printf("wrote to memory\n");
+
 	/* synchronize memory with physical storage */
 	syncRes = msync(data, numOfBytesToWrite, MS_SYNC);
 	if (syncRes < 0) {
 		printf("Error while using msync syscall. %s\n", strerror(errno));
+		munmap(data, numOfBytesToWrite);
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -95,27 +114,27 @@ int main (int argc, char* argv[]) {
 	printf("right before sending the SIGUSR1 signal\n");
 	if (kill(readerProcID, 10) == -1 ) {
 		printf("kill didn't work...\n");
+		munmap(data, numOfBytesToWrite);
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
-
 
 	munmapRes = munmap(data, numOfBytesToWrite);
 	if (munmapRes < 0) {
 		printf("Error while using munmap syscall. %s\n", strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
-
-
-
-
-
-
-	/********************TIME MEASUREMENTS************************/
 
 	/*get time after writing to mapped file*/
 	returnVal2 = gettimeofday(&t2, NULL);
 	if (returnVal2 == -1) {
 		printf("Could not get time of day. Exiting...\n");
+		close(fileDesc);
+		munmap(data, numOfBytesToWrite);
+		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -124,6 +143,9 @@ int main (int argc, char* argv[]) {
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
 	printf("%d were written in %f microseconds through MMAP\n", numOfBytesToWrite ,elapsed_microsec);
+
+	/* restore default signal handler*/
+	signal(SIGTERM, SIG_DFL);
 	close(fileDesc);
 	return 0;
 }
