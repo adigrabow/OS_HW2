@@ -1,0 +1,130 @@
+/*
+ * mmap_reader.c
+ *
+ *  Created on: Dec 3, 2016
+ *      Author: adigrabow
+ */
+#include <sys/time.h> //for time measurements
+#include <unistd.h>
+#include <stdio.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <signal.h>
+
+#define MAPPED_FILE_NAME "/tmp/mmapped.bin"
+void sigusr_handler(int sig); /* a SIGUSR1 handler function */
+
+
+void sigusr_handler(int sig) {
+
+	printf("Entered SIGUSR1 handler\n");
+
+	struct timeval t1, t2;
+	double elapsed_microsec;
+	int returnVal = 0;
+	int returnVal2 = 0;
+
+	struct stat fileStat;
+	int fileSize = 0;
+	int fileDescriptor = 0;
+	int lseekRes = 0;
+	char* data; /* a pointer to the place in the mapped file we want to read from */
+	int charCounter = 0; /* counts the  number of 'a' characters read from the file */
+
+	/* Open the file */
+	fileDescriptor = open(MAPPED_FILE_NAME, O_RDONLY | O_CREAT, 0600); //TODO maek sure read only is okay.
+	if (fileDescriptor < 0) {
+		printf("Error opening/creating file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		exit(-1);
+	}
+	printf("opened file\n");
+	/* Determine the file size (man 2 lseek, man 2 stat)*/
+	if (stat(MAPPED_FILE_NAME,&fileStat) < 0) {
+		printf("Could not receive %s stats. Exiting...\n", MAPPED_FILE_NAME);
+		exit(-1);
+	}
+
+	fileSize = fileStat.st_size; /* in bytes */
+	printf("file size is = %d\n",fileSize);
+/*
+	lseekRes = lseek(fileDescriptor, 0, SEEK_SET); //TODO what to do with lseek?? for what??
+	if (lseekRes < 0) {
+		printf("Error using lseek() to 'stretch' the file: %s\n", strerror(errno));
+		exit(-1);
+	}*/
+
+	/*get time before reading the mapped file*/
+	returnVal = gettimeofday(&t1, NULL);
+	if (returnVal == -1) {
+		printf("Could not get time of day. Exiting...\n");
+		exit(-1);
+	}
+
+	/* Create a memory map for the file */
+	data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,0);
+	if (MAP_FAILED == data) {
+		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		exit(-1);
+	}
+
+	printf("mapped file\n");
+	/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
+	for (int i = 0; i < fileSize; i++ ) {
+		if ( (char) data[i] == 'a') {
+			charCounter++;
+		}
+	}
+
+	printf("read %d 'a' chars\n",charCounter);
+	/*get time after reading from mapped file*/
+	returnVal2 = gettimeofday(&t2, NULL);
+	if (returnVal2 == -1) {
+		printf("Could not get time of day. Exiting...\n");
+		exit(-1);
+	}
+
+	/*Counting time elapsed*/
+	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
+	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
+
+	printf("%d were written in %f microseconds through MMAP\n", fileSize ,elapsed_microsec);
+
+	/* Remove the file from the disk (man 2 unlink) */
+	if (unlink(MAPPED_FILE_NAME) == -1) {
+		printf("Could not unlink %s from file system. Exiting..,\n", MAPPED_FILE_NAME);
+		exit(-1);
+	}
+
+	exit(0);
+
+}
+
+
+int main(int argc, char* argv[]) {
+
+	printf("My process ID : %d\n", getpid());
+	struct sigaction new_action;
+	new_action.sa_handler = sigusr_handler;
+	new_action.sa_flags = 0;
+	if (0 != sigaction (SIGUSR1, &new_action, NULL))
+	{
+		printf("Signal handle registration failed. %s\n",strerror(errno));
+		return errno;
+	}
+
+	while (1) {
+
+		sleep(2);
+		printf("waiting for signal...\n");
+	}
+
+	return 0;
+}
