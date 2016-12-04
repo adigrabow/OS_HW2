@@ -91,12 +91,21 @@ void sigusr_handler(int sig) {
 		/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
 		index = 0;
 
-		while (charCounter < fileSize - 1) {
+		while((char) data[index] != '\0') {
 			if ((char) data[index] == 'a') {
 				charCounter++;
+				index++;
 			}
 		}
 
+		/*
+		while (charCounter < fileSize - 1) {
+			if ((char) data[index] == 'a') {
+				charCounter++;
+				index++;
+			}
+		}
+		 */
 		/* munmap */
 		munmapRes = munmap(data, BUFFER_SIZE);
 		if (munmapRes < 0) {
