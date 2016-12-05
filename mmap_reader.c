@@ -82,10 +82,12 @@ void sigusr_handler(int sig) {
 		exit(errno);
 	}
 
-	while ( (char) data[charCounter] != '\0') {
+	int index = 0;
+	while ( (char) data[index] != '\0') {
 		if ((char) data[index] == 'a') {
 			charCounter++;
 		}
+		index++;
 	}
 
 	/* munmap */
