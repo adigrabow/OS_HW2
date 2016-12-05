@@ -154,7 +154,6 @@ int main(int argc, char* argv[]) {
 	while (1) {
 
 		sleep(2);
-		printf("waiting for signal...\n");
 	}
 
 	return 0;
