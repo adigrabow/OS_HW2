@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <string.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
@@ -28,6 +28,11 @@ int main(int argc, char* argv[]) {
 	int buffer[BUFFER_SIZE]; /*how many bytes to read from the pipe*/
 	int numOfBytesRead = 0;
 	int totalNumOfBytesRead = 0;
+	int numOfIterations = 0;
+	int iterationNum = 0;
+	struct stat fileStat;
+	int fileSize = 0;
+	int index = 0;
 
 	/*open the pipe file for reading*/
 	pipeInFile = open(FIFO_NAME, O_RDONLY);
@@ -38,17 +43,41 @@ int main(int argc, char* argv[]) {
 		return errno;
 	}
 
+	/* Determine the file size (man 2 stat)*/
+	if (stat(FIFO_NAME,&fileStat) < 0) {
+		printf("Could not receive %s stats. Exiting...\n", FIFO_NAME);
+		close(pipeInFile);
+		return errno;
+	}
+
+	fileSize = fileStat.st_size; /* in bytes */
+
+	numOfIterations = (fileSize /BUFFER_SIZE ) + 1;
 	/*get time before reading from pipe*/
 	int returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
 		printf("Could not get time of day. Exiting...\n");
+		close(pipeInFile);
 		return errno;
 	}
 
-//TODO what if read didn't work?
-	while ((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
-		totalNumOfBytesRead += numOfBytesRead;
+
+	while ( iterationNum < numOfIterations) {
+		index = 0;
+		numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE);
+		if (numOfBytesRead < 0) {
+			printf("Error reading from file %s.", FIFO_NAME);
+			close(pipeInFile);
+		}
+		while (buffer[index] != '\0') {
+			if (buffer[index] == 'a') {
+				totalNumOfBytesRead++;
+			}
+			index++;
+		}
+		iterationNum++;
 	}
+
 
 	/*get time after reading from pipe*/
 	int returnVal2 = gettimeofday(&t2, NULL);
@@ -61,7 +90,7 @@ int main(int argc, char* argv[]) {
 	  elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	  elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	  printf("%d were read in %f microseconds through FIFO\n", totalNumOfBytesRead ,elapsed_microsec);
+	  printf("%d were read in %f microseconds through FIFO\n", totalNumOfBytesRead + 1 ,elapsed_microsec);
 
 	  close(pipeInFile);
 
