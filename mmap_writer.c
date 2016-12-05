@@ -49,7 +49,6 @@ int main (int argc, char* argv[]) {
 	int lseekRes = 0;
 	int munmapRes = 0;
 	int writeRes = 0;
-	int numberOFIterations = (numOfBytesToWrite / BUFFER_SIZE) + 1;
 	int charCount = 0; /*the number of characters already written*/
 
 	/* open/create the file to be mapped to memory */

@@ -114,7 +114,7 @@ void sigusr_handler(int sig) {
 	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	printf("%d were read in %f microseconds through MMAP\n", charCounter ,elapsed_microsec);
+	printf("%d were read in %f microseconds through MMAP\n", charCounter+1 ,elapsed_microsec);
 
 
 	/* Remove the file from the disk (man 2 unlink) */
