@@ -98,7 +98,7 @@ int main (int argc, char* argv[]) {
 
 	/* write to the file (it's in the memory!) */
 	while (charCount < numOfBytesToWrite - 1) {
-		data[charCount] = 'b';
+		data[charCount] = 'a';
 		charCount++;
 	}
 
