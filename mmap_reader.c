@@ -42,8 +42,6 @@ void sigusr_handler(int sig) {
 	char* data; /* a pointer to the place in the mapped file we want to read from */
 	int charCounter = 0; /* counts the  number of 'a' characters read from the file */
 	int munmapRes = 0;
-	int numberOFIterations = 0;
-	int index = 0;
 
 
 	/* Open the file */
@@ -63,10 +61,17 @@ void sigusr_handler(int sig) {
 	}
 
 	fileSize = fileStat.st_size; /* in bytes */
-	numberOFIterations = (fileSize / BUFFER_SIZE) + 1;
 
-	printf("numberOFIterations = %d\n", numberOFIterations);
 	printf("file size is = %d\n",fileSize);
+
+	/* Create a memory map for the file */
+	data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,0);
+	if (MAP_FAILED == data) {
+		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		close(fileDescriptor);
+		signal(SIGTERM, SIG_DFL);
+		exit(errno);
+	}
 
 	/*get time before reading the mapped file*/
 	returnVal = gettimeofday(&t1, NULL);
@@ -77,44 +82,19 @@ void sigusr_handler(int sig) {
 		exit(errno);
 	}
 
-
-	for (int i = 0; i < numberOFIterations; i++) {
-
-		/* Create a memory map for the file */
-		data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,i * BUFFER_SIZE); /* loop over ofset 4096 */
-		if (MAP_FAILED == data) {
-			printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
-			close(fileDescriptor);
-			signal(SIGTERM, SIG_DFL);
-			exit(errno);
+	while ( (char) data[charCounter] != '\0') {
+		if ((char) data[index] == 'a') {
+			charCounter++;
 		}
+	}
 
-		/* Count the number of 'a' bytes in the array until the first NULL ('\0') */
-		index = 0;
-
-		while((char) data[index] != '\0') {
-			if ((char) data[index] == 'a') {
-				charCounter++;
-				index++;
-			}
-		}
-
-		/*
-		while (charCounter < fileSize - 1) {
-			if ((char) data[index] == 'a') {
-				charCounter++;
-				index++;
-			}
-		}
-		 */
-		/* munmap */
-		munmapRes = munmap(data, BUFFER_SIZE);
-		if (munmapRes < 0) {
-			printf("Error while using munmap syscall. %s\n", strerror(errno));
-			close(fileDescriptor);
-			signal(SIGTERM, SIG_DFL);
-			exit(errno);
-		}
+	/* munmap */
+	munmapRes = munmap(data, fileSize);
+	if (munmapRes < 0) {
+		printf("Error while using munmap syscall. %s\n", strerror(errno));
+		close(fileDescriptor);
+		signal(SIGTERM, SIG_DFL);
+		exit(errno);
 	}
 
 	printf("read %d 'a' chars\n",charCounter);

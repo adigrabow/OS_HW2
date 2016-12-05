@@ -51,9 +51,6 @@ int main (int argc, char* argv[]) {
 	int writeRes = 0;
 	int numberOFIterations = (numOfBytesToWrite / BUFFER_SIZE) + 1;
 	int charCount = 0; /*the number of characters already written*/
-	int index = 0;
-
-	printf("numberOFIterations = %d\n", numberOFIterations);
 
 	/* open/create the file to be mapped to memory */
 	fileDesc = open(MAPPED_FILE_NAME, O_RDWR | O_CREAT, 0600);
@@ -90,34 +87,28 @@ int main (int argc, char* argv[]) {
 		return errno;
 	}
 
-	/* each iteration we will write 4096 bytes to the file*/
-	for (int i = 0; i < numberOFIterations; i++) {
+	/* map the file: both read & write (same as 'open'), and make sure we can share it */
+	data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,0);
+	if (MAP_FAILED == data) {
+		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
+		return errno;
+	}
 
-		/* map the file: both read & write (same as 'open'), and make sure we can share it */
-		data = (char*) mmap(NULL, numOfBytesToWrite, PROT_READ | PROT_WRITE, MAP_SHARED, fileDesc ,i * BUFFER_SIZE);
-		if (MAP_FAILED == data) {
-			printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
-			close(fileDesc);
-			signal(SIGTERM, SIG_DFL);
-			return errno;
-		}
-		index = 0;
-		/* write to the file (it's in the memory!) */
-		while (charCount < numOfBytesToWrite - 1) {
-			data[index] = 'b';
-			index++;
-			charCount++;
-		}
+	/* write to the file (it's in the memory!) */
+	while (charCount < numOfBytesToWrite - 1) {
+		data[charCount] = 'b';
+		charCount++;
+	}
 
-		/* release the memory - unmap the file */
-		munmapRes = munmap(data, BUFFER_SIZE);
-		if (munmapRes < 0) {
-			printf("Error while using munmap syscall. %s\n", strerror(errno));
-			close(fileDesc);
-			signal(SIGTERM, SIG_DFL);
-			return errno;
-		}
-
+	/* release the memory - unmap the file */
+	munmapRes = munmap(data, numOfBytesToWrite);
+	if (munmapRes < 0) {
+		printf("Error while using munmap syscall. %s\n", strerror(errno));
+		close(fileDesc);
+		signal(SIGTERM, SIG_DFL);
+		return errno;
 	}
 
 
