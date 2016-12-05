@@ -61,7 +61,8 @@ int main(int argc, char* argv[]) {
 		return errno;
 	}
 
-
+	printf("fileSize = %d\n", fileSize);
+	printf("numOfIterations=%d\n",numOfIterations);
 	while ( iterationNum < numOfIterations) {
 		index = 0;
 		numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE);
