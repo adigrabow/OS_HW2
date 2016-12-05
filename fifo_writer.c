@@ -91,6 +91,7 @@ int main(int argc, char* argv[]) {
 
 	close(pipeOutFile);
 
+	printf("fifo_writer: before unlink\n");
 	if (unlink(FIFO_NAME) < 0 ) {
 		printf("Error while trying to use unlink syscall. Exiting...");
 		return errno;
