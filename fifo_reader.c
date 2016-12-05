@@ -21,6 +21,8 @@
 
 int main(int argc, char* argv[]) {
 
+	sleep(2);
+
 	struct timeval t1, t2;
 	double elapsed_microsec;
 
