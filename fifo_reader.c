@@ -18,7 +18,7 @@
 #include <stdlib.h>
 
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 2048
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
@@ -76,6 +76,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 	}
+
 	if (numOfBytesRead < 0) {
 		printf("Error reading from file %s.", FIFO_NAME);
 		close(pipeInFile);

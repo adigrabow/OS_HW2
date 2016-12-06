@@ -17,7 +17,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 2048
 #define FIFO_NAME "/tmp/osfifo"
 #define PERMISSION_CODE 0600
 
@@ -28,15 +28,13 @@ int main(int argc, char* argv[]) {
 
 	int pipeOutFile; /*file descriptor*/
 	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
+	int numOfBytesLeftToSend = numOfBytes;
 	char buffer[numOfBytesToSend]; //TODO what if this size is huge?
 	int numOfBytesWritten = 0;
 	int returnVal = 0;
 	int returnVal2 = 0;
 
-	/*create the message to be sent*/
-	for(int i = 0; i < numOfBytesToSend - 1; i++) {
-		buffer[i] = 'a';
-	}
+
 
 	buffer[numOfBytesToSend - 1] = '\0';
 
@@ -44,16 +42,16 @@ int main(int argc, char* argv[]) {
 	/*create a named pipe*/
 	if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
 		printf("Error while trying to use mkfifo for %s. %s",FIFO_NAME, strerror(errno));
-		return errno;
+		exit(errno);
 	}
 
 	/*open the pipe file for writing*/
 	pipeOutFile = open(FIFO_NAME, O_WRONLY);
-
 	/*error handling*/
 	if (pipeOutFile < 0) {
 		printf("Error opening file: %s. %s\n",FIFO_NAME, strerror(errno));
-		return errno;
+		unlink(FIFO_NAME);
+		exit(errno);
 	}
 
 	/*get time before writing to pipe*/
@@ -62,16 +60,43 @@ int main(int argc, char* argv[]) {
 		printf("Could not get time of day. Exiting...\n");
 		close(pipeOutFile);
 		unlink(FIFO_NAME);
-		return errno;
+		exit(errno);
 	}
 
-	numOfBytesWritten = write(pipeOutFile, buffer, numOfBytesToSend);
+	while (numOfBytesLeftToSend > 0 ) {
+
+		if (numOfBytesLeftToSend >= BUFFER_SIZE) {
+			/*create a portion of the message to be sent*/
+			for(int i = 0; i < BUFFER_SIZE - 1; i++) {
+				buffer[i] = 'a';
+			}
+			buffer[BUFFER_SIZE - 1] = '\0';
+
+		}else {
+
+			for (int i = 0; i < numOfBytesLeftToSend - 1; i++) {
+				buffer[i] = 'a';
+			}
+			buffer[numOfBytesLeftToSend - 1] = '\0';
+		}
+		numOfBytesLeftToSend = numOfBytesLeftToSend - BUFFER_SIZE;
+		numOfBytesWritten = write(pipeOutFile, buffer, BUFFER_SIZE);
+		if (numOfBytesWritten < 0) {
+			printf("Could not write to pipe. Exiting...\n");
+			close(pipeOutFile);
+			unlink(FIFO_NAME);
+			exit(errno);
+		}
+
+	}
+
+	/*numOfBytesWritten = write(pipeOutFile, buffer, numOfBytesToSend);
 	if (numOfBytesWritten < 0) {
 		printf("Could not write to pipe. Exiting...\n");
 		close(pipeOutFile);
 		unlink(FIFO_NAME);
-		return errno;
-	}
+		exit(errno);
+	}*/
 
 
 	/*get time after writing to pipe*/
@@ -80,7 +105,7 @@ int main(int argc, char* argv[]) {
 		printf("Could not get time of day. Exiting...\n");
 		close(pipeOutFile);
 		unlink(FIFO_NAME);
-		return errno;
+		exit(errno);
 	}
 
 	/*Counting time elapsed*/
