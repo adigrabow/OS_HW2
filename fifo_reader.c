@@ -15,6 +15,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+
 
 #define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
@@ -31,10 +33,10 @@ int main(int argc, char* argv[]) {
 	int numOfBytesRead = 0;
 	int totalNumOfBytesRead = 0;
 	int numOfIterations = 0;
-	int iterationNum = 0;
+//	int iterationNum = 0;
 	struct stat fileStat;
 	int fileSize = 0;
-	int index = 0;
+//	int index = 0;
 
 	/*open the pipe file for reading*/
 	pipeInFile = open(FIFO_NAME, O_RDONLY);
@@ -42,14 +44,14 @@ int main(int argc, char* argv[]) {
 	/*error handling*/
 	if (pipeInFile < 0) {
 		printf("Error opening file: %s. %s\n",FIFO_NAME, strerror(errno));
-		return errno;
+		exit(errno);
 	}
 
 	/* Determine the file size (man 2 stat)*/
 	if (stat(FIFO_NAME,&fileStat) < 0) {
 		printf("Could not receive %s stats. Exiting...\n", FIFO_NAME);
 		close(pipeInFile);
-		return errno;
+		exit(errno);
 	}
 
 	fileSize = fileStat.st_size; /* in bytes */
@@ -60,17 +62,32 @@ int main(int argc, char* argv[]) {
 	if (returnVal == -1) {
 		printf("Could not get time of day. Exiting...\n");
 		close(pipeInFile);
-		return errno;
+		exit(errno);
 	}
 
 	printf("fileSize = %d\n", fileSize);
 	printf("numOfIterations=%d\n",numOfIterations);
+
+	while((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
+
+		for (int i = 0; i < numOfBytesRead; i++) {
+			if (buffer[i] == 'a') {
+				totalNumOfBytesRead++;
+			}
+		}
+	}
+	if (numOfBytesRead < 0) {
+		printf("Error reading from file %s.", FIFO_NAME);
+		close(pipeInFile);
+		exit(errno);
+	}
+
+	/*
 	while ( iterationNum < numOfIterations) {
 		index = 0;
 		numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE);
 		if (numOfBytesRead < 0) {
-			printf("Error reading from file %s.", FIFO_NAME);
-			close(pipeInFile);
+
 		}
 		while (buffer[index] != '\0') {
 			if (buffer[index] == 'a') {
@@ -79,14 +96,15 @@ int main(int argc, char* argv[]) {
 			index++;
 		}
 		iterationNum++;
-	}
+	}*/
 
 
 	/*get time after reading from pipe*/
 	int returnVal2 = gettimeofday(&t2, NULL);
 	if (returnVal2 == -1) {
 		printf("Could not get time of day. Exiting...\n");
-		return errno;
+		close(pipeInFile);
+		exit(errno);
 	}
 
 	  /*Counting time elapsed*/
@@ -97,6 +115,6 @@ int main(int argc, char* argv[]) {
 
 	  close(pipeInFile);
 
-	  return 0;
+	 exit(0);
 
 }
