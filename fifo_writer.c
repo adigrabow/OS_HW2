@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
 
 	int pipeOutFile; /*file descriptor*/
 	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
-	int numOfBytesLeftToSend = numOfBytes;
-	char buffer[numOfBytesToSend]; //TODO what if this size is huge?
+	int numOfBytesLeftToSend = numOfBytesToSend;
+	char buffer[BUFFER_SIZE]; //TODO what if this size is huge?
 	int numOfBytesWritten = 0;
 	int returnVal = 0;
 	int returnVal2 = 0;
