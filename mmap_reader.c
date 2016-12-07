@@ -29,8 +29,6 @@ void sigusr_handler(int sig); /* a SIGUSR1 handler function */
 
 void sigusr_handler(int sig) {
 
-	printf("Entered SIGUSR1 handler\n");
-
 	struct timeval t1, t2;
 	double elapsed_microsec;
 	int returnVal = 0;
@@ -61,8 +59,6 @@ void sigusr_handler(int sig) {
 	}
 
 	fileSize = fileStat.st_size; /* in bytes */
-
-	printf("file size is = %d\n",fileSize);
 
 	/* Create a memory map for the file */
 	data = (char*) mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fileDescriptor ,0);
@@ -115,7 +111,7 @@ void sigusr_handler(int sig) {
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
 	printf("%d were read in %f microseconds through MMAP\n", charCounter+1 ,elapsed_microsec);
-
+	close(fileDescriptor);
 
 	/* Remove the file from the disk (man 2 unlink) */
 	if (unlink(MAPPED_FILE_NAME) == -1) {
@@ -127,7 +123,6 @@ void sigusr_handler(int sig) {
 
 	/* restore default signal handler*/
 	signal(SIGTERM, SIG_DFL);
-	close(fileDescriptor);
 	exit(0);
 
 }
@@ -135,7 +130,6 @@ void sigusr_handler(int sig) {
 
 int main(int argc, char* argv[]) {
 
-	printf("My process ID : %d\n", getpid());
 	struct sigaction new_action;
 	new_action.sa_handler = sigusr_handler;
 	new_action.sa_flags = 0;
