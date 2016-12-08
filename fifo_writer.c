@@ -16,29 +16,96 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <sys/mman.h>
 
 #define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
 #define PERMISSION_CODE 0600
 
+void sigpipe_handler(int sig);
+
+/* GLOBAL VARIABLES */
+
+int totalNumberOFBytesWritten;
+struct timeval t1, t2;
+double elapsed_microsec;
+int pipeOutFile; /*file descriptor*/
+
+void sigpipe_handler(int sig) {
+	//printf("inside sigpipe_handler\n");
+	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
+	/*get time after writing to pipe*/
+	double elapsed_microsec;
+	int returnVal2 = gettimeofday(&t2, NULL);
+	if (returnVal2 == -1) {
+		printf("Could not get time of day. Exiting...\n");
+		close(pipeOutFile);
+		unlink(FIFO_NAME);
+		exit(errno);
+	}
+
+	/*Counting time elapsed*/
+	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
+	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
+
+	printf("%d were written in %f miliseconds through FIFO\n", totalNumberOFBytesWritten ,elapsed_microsec);
+	
+	close(pipeOutFile);
+	/* Stop Ignoring SIGINT*/
+	if (0 != sigaction (SIGINT, &sigterm_old_action, NULL))
+	{
+		printf("Could not register the default SIGTERM handler. %s\n",strerror(errno));
+		exit(errno);
+	}
+	if (unlink(FIFO_NAME) < 0 ) {
+		printf("Error while trying to use unlink syscall. Exiting...");
+		exit(errno);
+	}
+	exit(0);
+
+}
 
 int main(int argc, char* argv[]) {
 
-	struct timeval t1, t2;
-	double elapsed_microsec;
+	//printf("entered writer\n");
+	//unlink(FIFO_NAME);
 
-	int pipeOutFile; /*file descriptor*/
-	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
+	/* structs to ignore SIGINT */
+	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
+	struct sigaction sigign_action; /* this is the handler that ignores SIGTERM*/
+	sigign_action.sa_handler = SIG_IGN; /*now we ignore the SIGINT signal*/
+
+	/* Set the SIGINT handler to  ignore*/
+	if (0 != sigaction (SIGINT, &sigign_action, &sigterm_old_action))
+	{
+		printf("Signal handle for SIGINT registration failed. %s\n",strerror(errno));
+		return errno;
+	}
+
+	/* structs to handle SIGPIPE */
+	struct sigaction new_action;
+	new_action.sa_handler = sigpipe_handler;
+	new_action.sa_flags = 0;
+
+	/* Set a handler for SIGPIPE*/
+	if (0 != sigaction (SIGPIPE, &new_action, NULL))
+	{
+		printf("Signal handle for SIGPIPE registration failed. %s\n",strerror(errno));
+		return errno;
+	}
+
+	double elapsed_microsec;/* for time measurements*/
+
 	
+	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
 	int numberOfIteration = numOfBytesToSend / BUFFER_SIZE;
 	int numberOfBytesLeft = numOfBytesToSend - (numberOfIteration * BUFFER_SIZE); 
-
-
-	char buffer[BUFFER_SIZE]; //TODO what if this size is huge?
+	char buffer[BUFFER_SIZE]; 
 	int numOfBytesWritten = 0;
 	int returnVal = 0;
 	int returnVal2 = 0;
-
+	totalNumberOFBytesWritten = 0;
 
 	/*create a named pipe*/
 	if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
@@ -75,6 +142,8 @@ int main(int argc, char* argv[]) {
 			close(pipeOutFile);
 			exit(errno);
 		}
+		totalNumberOFBytesWritten += numOfBytesWritten;
+		//printf("totalNumberOFBytesWritten=%d\n", totalNumberOFBytesWritten);
 
 	}
 
@@ -89,7 +158,7 @@ int main(int argc, char* argv[]) {
 			exit(errno);
 		}
 
-
+	totalNumberOFBytesWritten += numOfBytesWritten;
 	/*get time after writing to pipe*/
 	returnVal2 = gettimeofday(&t2, NULL);
 	if (returnVal2 == -1) {
@@ -103,14 +172,20 @@ int main(int argc, char* argv[]) {
 	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	printf("%d were written in %f microseconds through FIFO\n", numOfBytesToSend ,elapsed_microsec);
-
+	printf("%d were written in %f miliseconds through FIFO\n", numOfBytesToSend ,elapsed_microsec);
 	close(pipeOutFile);
+	//printf("exiting writer2\n");
 
+	/* Stop Ignoring SIGINT*/
+	if (0 != sigaction (SIGINT, &sigterm_old_action, NULL))
+	{
+		printf("Could not register the default SIGTERM handler. %s\n",strerror(errno));
+		return errno;
+	}
 	if (unlink(FIFO_NAME) < 0 ) {
 		printf("Error while trying to use unlink syscall. Exiting...");
 		exit(errno);
 	}
-
+	
 	exit(0);
 }

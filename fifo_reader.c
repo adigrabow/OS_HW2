@@ -16,13 +16,27 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <signal.h>
+#include <sys/mman.h>
 
 #define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
-	
+	//printf("entered reader\n");
+
+	/* structs to ignore SIGINT */
+	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
+	struct sigaction sigign_action; /* this is the handler that ignores SIGTERM*/
+	sigign_action.sa_handler = SIG_IGN; /*now we ignore the SIGINT signal*/
+
+	/* Set the SIGINT handler to  ignore*/
+	if (0 != sigaction (SIGINT, &sigign_action, &sigterm_old_action))
+	{
+		printf("Signal handle for SIGINT registration failed. %s\n",strerror(errno));
+		return errno;
+	}
+
 	sleep(2);
 
 	struct timeval t1, t2;
@@ -41,7 +55,6 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-
 	/*get time before reading from pipe*/
 	int returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
@@ -50,14 +63,20 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	int enteredLoop = 0;
+	//int enteredLoop = 0;
 	while((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
 		for (int i = 0; i < numOfBytesRead; i++) {
 			if (buffer[i] == 'a') {
 				totalNumOfBytesRead++;
 			}
+
+			/* SIGPIPE TEST*//*
+			if (enteredLoop == 300) {
+				printf("exiting so SIGPIPE should happen!!!\n");
+				exit(0);
+			}*/
 		}
-		enteredLoop++;
+		//enteredLoop++;
 	}
 
 	if (numOfBytesRead < 0) {
@@ -78,10 +97,11 @@ int main(int argc, char* argv[]) {
 	  elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	  elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	  printf("%d were read in %f microseconds through FIFO\n", totalNumOfBytesRead ,elapsed_microsec);
+	  printf("%d were read in %f miliseconds through FIFO\n", totalNumOfBytesRead ,elapsed_microsec);
 
 	  close(pipeInFile);
 
-	 exit(0);
+	//printf("exiting reader\n");
+	exit(0);
 
 }
