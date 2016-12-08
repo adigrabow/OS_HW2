@@ -22,6 +22,7 @@
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
+	
 
 	sleep(2);
 
