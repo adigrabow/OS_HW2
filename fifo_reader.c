@@ -23,7 +23,6 @@
 
 int main(int argc, char* argv[]) {
 	
-
 	sleep(2);
 
 	struct timeval t1, t2;
@@ -33,32 +32,16 @@ int main(int argc, char* argv[]) {
 	char buffer[BUFFER_SIZE]; /*how many bytes to read from the pipe*/
 	int numOfBytesRead = 0;
 	int totalNumOfBytesRead = 0;
-	int numOfIterations = 0;
-//	int iterationNum = 0;
-	struct stat fileStat;
-	int fileSize = 0;
-//	int index = 0;
 
 	/*open the pipe file for reading*/
 	pipeInFile = open(FIFO_NAME, O_RDONLY);
-
 	/*error handling*/
 	if (pipeInFile < 0) {
 		printf("Error opening file: %s. %s\n",FIFO_NAME, strerror(errno));
 		exit(errno);
 	}
 
-	/* Determine the file size (man 2 stat)*/
-	if (stat(FIFO_NAME,&fileStat) < 0) {
-		printf("Could not receive %s stats. Exiting...\n", FIFO_NAME);
-		close(pipeInFile);
-		exit(errno);
-	}
 
-	fileSize = fileStat.st_size; /* in bytes */
-
-	printf("fileSize=%d\n", fileSize);
-	numOfIterations = (fileSize / BUFFER_SIZE ) + 1;
 	/*get time before reading from pipe*/
 	int returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
@@ -67,7 +50,6 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	printf("numOfIterations=%d\n",numOfIterations);
 	int enteredLoop = 0;
 	while((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
 		for (int i = 0; i < numOfBytesRead; i++) {
@@ -84,23 +66,6 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	/*
-	while ( iterationNum < numOfIterations) {
-		index = 0;
-		numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE);
-		if (numOfBytesRead < 0) {
-
-		}
-		while (buffer[index] != '\0') {
-			if (buffer[index] == 'a') {
-				totalNumOfBytesRead++;
-			}
-			index++;
-		}
-		iterationNum++;
-	}*/
-
-
 	/*get time after reading from pipe*/
 	int returnVal2 = gettimeofday(&t2, NULL);
 	if (returnVal2 == -1) {
@@ -113,7 +78,7 @@ int main(int argc, char* argv[]) {
 	  elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	  elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	  printf("%d were read in %f microseconds through FIFO\n", totalNumOfBytesRead + 1 ,elapsed_microsec);
+	  printf("%d were read in %f microseconds through FIFO\n", totalNumOfBytesRead ,elapsed_microsec);
 
 	  close(pipeInFile);
 

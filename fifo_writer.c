@@ -39,7 +39,6 @@ int main(int argc, char* argv[]) {
 	int returnVal = 0;
 	int returnVal2 = 0;
 
-	printf("numberOfIteration=%d\n",numberOfIteration);
 
 	/*create a named pipe*/
 	if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
@@ -108,13 +107,10 @@ int main(int argc, char* argv[]) {
 
 	close(pipeOutFile);
 
-	printf("fifo_writer: before unlink\n");
-
 	if (unlink(FIFO_NAME) < 0 ) {
 		printf("Error while trying to use unlink syscall. Exiting...");
 		exit(errno);
 	}
-
 
 	exit(0);
 }
