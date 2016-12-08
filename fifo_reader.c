@@ -18,7 +18,7 @@
 #include <stdlib.h>
 
 
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 	double elapsed_microsec;
 
 	int pipeInFile;/*file descriptor*/
-	int buffer[BUFFER_SIZE]; /*how many bytes to read from the pipe*/
+	char buffer[BUFFER_SIZE]; /*how many bytes to read from the pipe*/
 	int numOfBytesRead = 0;
 	int totalNumOfBytesRead = 0;
 	int numOfIterations = 0;
@@ -56,7 +56,8 @@ int main(int argc, char* argv[]) {
 
 	fileSize = fileStat.st_size; /* in bytes */
 
-	numOfIterations = (fileSize /BUFFER_SIZE ) + 1;
+	printf("fileSize=%d\n", fileSize);
+	numOfIterations = (fileSize / BUFFER_SIZE ) + 1;
 	/*get time before reading from pipe*/
 	int returnVal = gettimeofday(&t1, NULL);
 	if (returnVal == -1) {
@@ -65,16 +66,15 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	printf("fileSize = %d\n", fileSize);
 	printf("numOfIterations=%d\n",numOfIterations);
-
+	int enteredLoop = 0;
 	while((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
-
 		for (int i = 0; i < numOfBytesRead; i++) {
 			if (buffer[i] == 'a') {
 				totalNumOfBytesRead++;
 			}
 		}
+		enteredLoop++;
 	}
 
 	if (numOfBytesRead < 0) {

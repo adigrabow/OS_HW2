@@ -17,27 +17,29 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 4096
 #define FIFO_NAME "/tmp/osfifo"
 #define PERMISSION_CODE 0600
 
 
 int main(int argc, char* argv[]) {
+
 	struct timeval t1, t2;
 	double elapsed_microsec;
 
 	int pipeOutFile; /*file descriptor*/
 	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
-	int numOfBytesLeftToSend = numOfBytesToSend;
+	
+	int numberOfIteration = numOfBytesToSend / BUFFER_SIZE;
+	int numberOfBytesLeft = numOfBytesToSend - (numberOfIteration * BUFFER_SIZE); 
+
+
 	char buffer[BUFFER_SIZE]; //TODO what if this size is huge?
 	int numOfBytesWritten = 0;
 	int returnVal = 0;
 	int returnVal2 = 0;
 
-
-
-	buffer[numOfBytesToSend - 1] = '\0';
-
+	printf("numberOfIteration=%d\n",numberOfIteration);
 
 	/*create a named pipe*/
 	if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
@@ -63,40 +65,30 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	while (numOfBytesLeftToSend > 0 ) {
-
-		if (numOfBytesLeftToSend >= BUFFER_SIZE) {
-			/*create a portion of the message to be sent*/
-			for(int i = 0; i < BUFFER_SIZE - 1; i++) {
-				buffer[i] = 'a';
-			}
-			buffer[BUFFER_SIZE - 1] = '\0';
-
-		}else {
-
-			for (int i = 0; i < numOfBytesLeftToSend - 1; i++) {
-				buffer[i] = 'a';
-			}
-			buffer[numOfBytesLeftToSend - 1] = '\0';
+	for (int i = 0; i < numberOfIteration; i++) {
+		for (int j = 0; j < BUFFER_SIZE; j++) {
+			buffer[j] = 'a';
 		}
-		numOfBytesLeftToSend = numOfBytesLeftToSend - BUFFER_SIZE;
+
 		numOfBytesWritten = write(pipeOutFile, buffer, BUFFER_SIZE);
 		if (numOfBytesWritten < 0) {
 			printf("Could not write to pipe. Exiting...\n");
 			close(pipeOutFile);
-			unlink(FIFO_NAME);
 			exit(errno);
 		}
 
 	}
 
-	/*numOfBytesWritten = write(pipeOutFile, buffer, numOfBytesToSend);
-	if (numOfBytesWritten < 0) {
-		printf("Could not write to pipe. Exiting...\n");
-		close(pipeOutFile);
-		unlink(FIFO_NAME);
-		exit(errno);
-	}*/
+	for (int i = 0; i < numberOfBytesLeft - 1; i++) {
+		buffer[i] = 'a';
+	}
+	buffer[numberOfBytesLeft - 1] = '\0';
+	numOfBytesWritten = write(pipeOutFile, buffer, numberOfBytesLeft);
+		if (numOfBytesWritten < 0) {
+			printf("Could not write to pipe. Exiting...\n");
+			close(pipeOutFile);
+			exit(errno);
+		}
 
 
 	/*get time after writing to pipe*/
@@ -112,7 +104,7 @@ int main(int argc, char* argv[]) {
 	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	printf("%d were written in %f microseconds through FIFO\n", numOfBytesWritten ,elapsed_microsec);
+	printf("%d were written in %f microseconds through FIFO\n", numOfBytesToSend ,elapsed_microsec);
 
 	close(pipeOutFile);
 
@@ -120,7 +112,7 @@ int main(int argc, char* argv[]) {
 
 	if (unlink(FIFO_NAME) < 0 ) {
 		printf("Error while trying to use unlink syscall. Exiting...");
-		return errno;
+		exit(errno);
 	}
 
 
