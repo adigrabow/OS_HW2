@@ -68,8 +68,14 @@ void sigpipe_handler(int sig) {
 
 int main(int argc, char* argv[]) {
 
+
+	if (argc < 2) {
+		printf("Expected 1 arguments: number_of_bytes_to_write.\n");
+		return -1;
+	}
 	//printf("entered writer\n");
-	//unlink(FIFO_NAME);
+	/* making sure the fifo does not exists (if so - delete it!)*/
+	unlink(FIFO_NAME);
 
 	/* structs to ignore SIGINT */
 	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
