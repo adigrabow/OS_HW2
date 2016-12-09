@@ -32,16 +32,20 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* Ignore SIGTERM */
-	if (signal(SIGTERM, SIG_IGN) == SIG_ERR) {
-		printf("Could not ignore SIGTERM signal as requested. Exiting...\n");
-		return -1;
+	struct sigaction sigterm_old_action; /* the old handler of SIGTERM will be stores here*/
+	struct sigaction sigign_action; /* this is the handler that ignores SIGTERM*/
+	sigign_action.sa_handler = SIG_IGN; /*now we ignore the SIGTERM signal*/
+
+	if (0 != sigaction (SIGTERM, &sigign_action, &sigterm_old_action))
+	{
+		printf("Signal handle for SIGTERM registration failed. %s\n",strerror(errno));
+		return errno;
 	}
 
 	struct timeval t1, t2;
 	double elapsed_microsec;
 	int returnVal = 0;
 	int returnVal2 = 0;
-
 	int numOfBytesToWrite = atoi(argv[1]);
 	int readerProcID = atoi(argv[2]);
 	int fileDesc = 0;
@@ -55,7 +59,6 @@ int main (int argc, char* argv[]) {
 	fileDesc = open(MAPPED_FILE_NAME, O_RDWR | O_CREAT, 0600);
 	if (fileDesc < 0) {
 		printf("Error opening/creating file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -64,7 +67,6 @@ int main (int argc, char* argv[]) {
 	if (lseekRes < 0) {
 		printf("Error using lseek() to 'stretch' the file: %s\n", strerror(errno));
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -73,7 +75,6 @@ int main (int argc, char* argv[]) {
 	if (writeRes < 0 ){
 		printf("Error writing last byte of the file: %s\n", strerror(errno));
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -82,7 +83,6 @@ int main (int argc, char* argv[]) {
 	if (returnVal == -1) {
 		printf("Could not get time of day. Exiting...\n");
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -91,7 +91,6 @@ int main (int argc, char* argv[]) {
 	if (MAP_FAILED == data) {
 		printf("Error mapping the file: %s. %s\n",MAPPED_FILE_NAME, strerror(errno));
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -106,18 +105,16 @@ int main (int argc, char* argv[]) {
 	if (munmapRes < 0) {
 		printf("Error while using munmap syscall. %s\n", strerror(errno));
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
 
 	/*Send a signal (SIGUSR1) to the reader process (man 2 kill)*/
-	printf("right before sending the SIGUSR1 signal\n");
+	//printf("right before sending the SIGUSR1 signal\n");
 	if (kill(readerProcID, 10) == -1 ) {
 		printf("kill didn't work...\n");
 		munmap(data, numOfBytesToWrite);
 		close(fileDesc);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -128,7 +125,6 @@ int main (int argc, char* argv[]) {
 		printf("Could not get time of day. Exiting...\n");
 		close(fileDesc);
 		munmap(data, numOfBytesToWrite);
-		signal(SIGTERM, SIG_DFL);
 		return errno;
 	}
 
@@ -136,10 +132,16 @@ int main (int argc, char* argv[]) {
 	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	printf("%d were written in %f microseconds through MMAP\n", numOfBytesToWrite ,elapsed_microsec);
+	printf("%d were written in %f miliseconds through MMAP\n", numOfBytesToWrite ,elapsed_microsec);
 
-	/* restore default signal handler*/
-	signal(SIGTERM, SIG_DFL);
+	/* restore default SIGTERM signal handler*/
+	if (0 != sigaction (SIGTERM, &sigterm_old_action, NULL))
+	{
+		printf("Could not register the default SIGTERM handler. %s\n",strerror(errno));
+		return errno;
+	}
+
+
 	close(fileDesc);
 	return 0;
 }
