@@ -79,6 +79,26 @@ void sigusr_handler(int sig) {
 			charCounter++;
 		}
 		index++;
+		if (index == fileSize ) {
+			printf("Missing End_Of_File Symbol...\n");
+
+				/*get time after reading from mapped file*/
+			returnVal2 = gettimeofday(&t2, NULL);
+			if (returnVal2 == -1) {
+				printf("Could not get time of day. Exiting...\n");
+				munmap(data, fileSize);
+				close(fileDescriptor);
+				exit(errno);
+			}
+
+			/*Counting time elapsed*/
+			elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
+			elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
+
+			printf("%d were read in %f miliseconds through MMAP\n", charCounter ,elapsed_microsec);
+			close(fileDescriptor);
+			exit(-1);
+		}
 	}
 
 	/* munmap */
