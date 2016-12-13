@@ -75,7 +75,8 @@ int main(int argc, char* argv[]) {
 	}
 	//printf("entered writer\n");
 	/* making sure the fifo does not exists (if so - delete it!)*/
-	unlink(FIFO_NAME);
+	//unlink(FIFO_NAME);
+
 
 	/* structs to ignore SIGINT */
 	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
@@ -113,20 +114,47 @@ int main(int argc, char* argv[]) {
 	int returnVal2 = 0;
 	totalNumberOFBytesWritten = 0;
 
-	/*create a named pipe*/
-	if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
-		printf("Error while trying to use mkfifo for %s. %s",FIFO_NAME, strerror(errno));
-		exit(errno);
+	pipeOutFile = open(FIFO_NAME, O_WRONLY | O_APPEND);
+	
+	if (errno == ENOENT) { /* no such file, so mkfifo! */
+		/*create a named pipe*/
+		//printf("errno = ENOENT, regular mkfifo!\n");
+		if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
+			printf("Error while trying to use mkfifo for %s. %s",FIFO_NAME, strerror(errno));
+			exit(errno);
+		}
+
+		/*open the pipe file for writing*/
+		pipeOutFile = open(FIFO_NAME, O_WRONLY);
+		/*error handling*/
+		if (pipeOutFile < 0) {
+			printf("Error opening file: %s. %s\n",FIFO_NAME, strerror(errno));
+			unlink(FIFO_NAME);
+			exit(errno);
+		}
+
 	}
 
-	/*open the pipe file for writing*/
-	pipeOutFile = open(FIFO_NAME, O_WRONLY);
-	/*error handling*/
-	if (pipeOutFile < 0) {
+
+	else if ( pipeOutFile > 0) { /* fifo file already exists*/
+		//printf("fifo already exists, giving new permissions.\n");
+		/*give it right permissions*/
+		if (chmod(FIFO_NAME, PERMISSION_CODE) < 0) {
+			printf("chmod Syscall faild. Exiting...\n");
+			close(pipeOutFile);
+			unlink(FIFO_NAME);
+			exit(errno);
+
+		}
+
+	/* something went wrong while trying to open the file! */ 
+	}else {
 		printf("Error opening file: %s. %s\n",FIFO_NAME, strerror(errno));
 		unlink(FIFO_NAME);
 		exit(errno);
+
 	}
+
 
 	/*get time before writing to pipe*/
 	returnVal = gettimeofday(&t1, NULL);
