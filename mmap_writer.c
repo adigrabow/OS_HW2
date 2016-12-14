@@ -75,7 +75,7 @@ int main (int argc, char* argv[]) {
 	}
 
 	/* write at the end of the file*/
-	writeRes = write(fileDesc, "\0", 1);
+	writeRes = write(fileDesc, "", 1);
 	if (writeRes < 0 ){
 		printf("Error writing last byte of the file: %s\n", strerror(errno));
 		close(fileDesc);

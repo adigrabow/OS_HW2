@@ -172,8 +172,6 @@ int main(int argc, char* argv[]) {
 			exit(errno);
 		}
 		totalNumberOFBytesWritten += numOfBytesWritten;
-		
-
 	}
 
 	for (int i = 0; i < numberOfBytesLeft - 1; i++) {
