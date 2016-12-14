@@ -23,7 +23,6 @@
 #define FIFO_NAME "/tmp/osfifo"
 
 int main(int argc, char* argv[]) {
-	//printf("entered reader\n");
 
 	/* structs to ignore SIGINT */
 	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
@@ -63,20 +62,14 @@ int main(int argc, char* argv[]) {
 		exit(errno);
 	}
 
-	//int enteredLoop = 0;
 	while((numOfBytesRead = read(pipeInFile, buffer,BUFFER_SIZE)) > 0) {
 		for (int i = 0; i < numOfBytesRead; i++) {
 			if (buffer[i] == 'a') {
 				totalNumOfBytesRead++;
 			}
 
-			/* SIGPIPE TEST*//*
-			if (enteredLoop == 300) {
-				printf("exiting so SIGPIPE should happen!!!\n");
-				exit(0);
-			}*/
 		}
-		//enteredLoop++;
+		
 	}
 
 	if (numOfBytesRead < 0) {
@@ -101,7 +94,7 @@ int main(int argc, char* argv[]) {
 
 	  close(pipeInFile);
 
-	//printf("exiting reader\n");
+	
 	exit(0);
 
 }

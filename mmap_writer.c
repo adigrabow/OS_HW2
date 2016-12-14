@@ -42,12 +42,16 @@ int main (int argc, char* argv[]) {
 		return errno;
 	}
 
+	char* ptr1;
+	char* ptr2;
+	int numOfBytesToWrite =(int) strtol(argv[1], &ptr1, 10);
+	int readerProcID = (int) strtol(argv[2], &ptr2, 10);
+
+
 	struct timeval t1, t2;
 	double elapsed_microsec;
 	int returnVal = 0;
 	int returnVal2 = 0;
-	int numOfBytesToWrite = atoi(argv[1]);
-	int readerProcID = atoi(argv[2]);
 	int fileDesc = 0;
 	char* data; /* a pointer to the place in the mapped file we want to write to */
 	int lseekRes = 0;
@@ -110,7 +114,6 @@ int main (int argc, char* argv[]) {
 
 
 	/*Send a signal (SIGUSR1) to the reader process (man 2 kill)*/
-	//printf("right before sending the SIGUSR1 signal\n");
 	if (kill(readerProcID, 10) == -1 ) {
 		printf("kill didn't work...\n");
 		munmap(data, numOfBytesToWrite);

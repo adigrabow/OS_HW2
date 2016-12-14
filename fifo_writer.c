@@ -33,7 +33,7 @@ double elapsed_microsec;
 int pipeOutFile; /*file descriptor*/
 
 void sigpipe_handler(int sig) {
-	//printf("inside sigpipe_handler\n");
+
 	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
 	/*get time after writing to pipe*/
 	double elapsed_microsec;
@@ -73,10 +73,6 @@ int main(int argc, char* argv[]) {
 		printf("Expected 1 arguments: number_of_bytes_to_write.\n");
 		return -1;
 	}
-	//printf("entered writer\n");
-	/* making sure the fifo does not exists (if so - delete it!)*/
-	//unlink(FIFO_NAME);
-
 
 	/* structs to ignore SIGINT */
 	struct sigaction sigterm_old_action; /* the old handler of SIGINT*/
@@ -103,13 +99,12 @@ int main(int argc, char* argv[]) {
 	}
 
 	double elapsed_microsec;/* for time measurements*/
-
-	
-	int numOfBytesToSend = atoi(argv[1]);/*how many bytes to read from the pipe*/
-	int numberOfIteration = numOfBytesToSend / BUFFER_SIZE;
-	int numberOfBytesLeft = numOfBytesToSend - (numberOfIteration * BUFFER_SIZE); 
+	char* ptr;
+	long numOfBytesToSend = strtol(argv[1], &ptr, 10);
+	long numberOfIteration = numOfBytesToSend / BUFFER_SIZE;
+	long numberOfBytesLeft = numOfBytesToSend - (numberOfIteration * BUFFER_SIZE); 
 	char buffer[BUFFER_SIZE]; 
-	int numOfBytesWritten = 0;
+	long numOfBytesWritten = 0;
 	int returnVal = 0;
 	int returnVal2 = 0;
 	totalNumberOFBytesWritten = 0;
@@ -118,7 +113,7 @@ int main(int argc, char* argv[]) {
 	
 	if (errno == ENOENT) { /* no such file, so mkfifo! */
 		/*create a named pipe*/
-		//printf("errno = ENOENT, regular mkfifo!\n");
+		
 		if (mkfifo(FIFO_NAME,PERMISSION_CODE) < 0 ) {
 			printf("Error while trying to use mkfifo for %s. %s",FIFO_NAME, strerror(errno));
 			exit(errno);
@@ -137,7 +132,7 @@ int main(int argc, char* argv[]) {
 
 
 	else if ( pipeOutFile > 0) { /* fifo file already exists*/
-		//printf("fifo already exists, giving new permissions.\n");
+		
 		/*give it right permissions*/
 		if (chmod(FIFO_NAME, PERMISSION_CODE) < 0) {
 			printf("chmod Syscall faild. Exiting...\n");
@@ -177,7 +172,7 @@ int main(int argc, char* argv[]) {
 			exit(errno);
 		}
 		totalNumberOFBytesWritten += numOfBytesWritten;
-		//printf("totalNumberOFBytesWritten=%d\n", totalNumberOFBytesWritten);
+		
 
 	}
 
@@ -206,9 +201,9 @@ int main(int argc, char* argv[]) {
 	elapsed_microsec = (t2.tv_sec - t1.tv_sec) * 1000.0;
 	elapsed_microsec += (t2.tv_usec - t1.tv_usec) / 1000.0;
 
-	printf("%d were written in %f miliseconds through FIFO\n", numOfBytesToSend ,elapsed_microsec);
+	printf("%ld were written in %f miliseconds through FIFO\n", numOfBytesToSend ,elapsed_microsec);
 	close(pipeOutFile);
-	//printf("exiting writer2\n");
+	
 
 	/* Stop Ignoring SIGINT*/
 	if (0 != sigaction (SIGINT, &sigterm_old_action, NULL))
